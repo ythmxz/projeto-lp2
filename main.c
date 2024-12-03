@@ -1,10 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#define DELAY(x) Sleep(x)
+#else
+#define DELAY(x) usleep(x * 1000)
+#endif
 
 FILE *p_arquivo;
 
 int flag = 0;
+int atraso = 500;
 
 typedef struct {
 
@@ -50,12 +59,15 @@ int main() {
 	registro **p_despesa = &despesa;
 
 	printf("\n-----------------------------------------------------------------\n");
-	printf("GERENCIADOR DE DESPESAS v1.0.2");
+	printf("GERENCIADOR DE DESPESAS v1.0.5");
 	printf("\n-----------------------------------------------------------------\n");
 
 	carregarDados(despesa, p_tamanho);
 
 	if ( flag == 1 ) {
+
+		printf("\nOlá, seja bem-vindo(a) ao gerenciador de despesas! Para começar "
+				"vamos criar sua primeira despesa.\n");
 
 		criarRegistro(despesa);
 		salvarDados(despesa, p_tamanho);
@@ -74,6 +86,8 @@ int main() {
 				"\n3 - Editar despesa\n4 - Mostrar despesas\n");
 		printf("\n\033[33mResposta:\033[0m ");
 		scanf("%d", &menu);
+
+		DELAY(atraso);
 
 		printf("\n-----------------------------------------------------------------\n");
 
@@ -124,12 +138,13 @@ void salvarDados(registro *despesa, int *p_tamanho) {
 
 	p_arquivo = fopen("despesas.bin", "wb");
 
-	printf("\n\033[33mSalvando dados...\033[0m\033[2K");
+	printf("\n\033[33mSalvando dados...\033[0m");
 
 	fwrite(p_tamanho, sizeof(int), 1, p_arquivo);
 	fwrite(despesa, sizeof(registro),*p_tamanho, p_arquivo);
 
-	printf("\r\033[32mDados salvos!\033[0m\n");
+	DELAY(atraso);
+	printf("\r\033[2K\033[32mDados salvos!\033[0m\n");
 
 	fclose(p_arquivo);
 
@@ -142,9 +157,12 @@ void carregarDados(registro *despesa, int *p_tamanho) {
 
 	if ( p_arquivo == NULL ) {
 
-		printf("\n\033[33mCriando arquivo...\033[0m\033[2K");
+		printf("\n\033[33mCriando arquivo...\033[0m");
+
 		p_arquivo = fopen("despesas.bin", "wb");
-		printf("\r\033[32mArquivo criado!\033[0m\n");
+
+		DELAY(atraso);
+		printf("\r\033[2K\033[32mArquivo criado!\033[0m\n");
 
 		flag = 1;
 
@@ -152,12 +170,13 @@ void carregarDados(registro *despesa, int *p_tamanho) {
 
 	else {
 
-		printf("\n\033[33mCarregando dados...\033[0m\033[2K");
+		printf("\n\033[33mCarregando dados...\033[0m");
 
 		fread(p_tamanho, sizeof(int), 1, p_arquivo);
 		fread(despesa, sizeof(registro), *p_tamanho, p_arquivo);
 
-		printf("\r\033[32mDados carregados!\033[0m\n");
+		DELAY(atraso);
+		printf("\r\033[2K\033[32mDados carregados!\033[0m\n");
 
 	}
 
