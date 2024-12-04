@@ -1,12 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#define DELAY(x) Sleep(x)
+#else
+#define DELAY(x) usleep(x * 1000)
+#endif
 
 FILE *p_arquivo;
 
-const int LIMITE_DESPESA = 100;
-
 int flag = 0;
+int atraso = 500;
 
 typedef struct {
 
@@ -19,12 +26,12 @@ typedef struct {
 
 void criarRegistro(registro *despesa);
 
-void salvarDados(registro *despesa, int tamanho);
-void carregarDados(registro *despesa, int tamanho);
+void salvarDados(registro *despesa, int *p_tamanho);
+void carregarDados(registro **p_despesa, int *p_tamanho);
 
 void adicionarDespesa(registro **p_despesa, int *p_tamanho);
 void removerDespesa(registro **p_despesa, int *p_tamanho, int remover);
-void editarDespesa(registro *despesa, int editar);
+void editarDespesa(registro *despesa, int *p_tamanho, int editar);
 void mostrarDespesa(registro *despesa, int *p_tamanho);
 
 double somarGastos(registro *despesa, int *p_tamanho);
@@ -43,7 +50,7 @@ int main() {
 	if ( despesa == NULL ) {
 
 		printf("\n-----------------------------------------------------------------\n");
-		printf("Erro de alocação! Encerrando programa.");
+		printf("\033[1;31mErro de alocação! Encerrando programa.\033[0m");
 		printf("\n-----------------------------------------------------------------\n");
 		return 1;
 
@@ -52,15 +59,18 @@ int main() {
 	registro **p_despesa = &despesa;
 
 	printf("\n-----------------------------------------------------------------\n");
-	printf("GERENCIADOR DE DESPESAS v1.0.0");
+	printf("GERENCIADOR DE DESPESAS v1.0.5");
 	printf("\n-----------------------------------------------------------------\n");
 
-	carregarDados(despesa, *p_tamanho);
+	carregarDados(p_despesa, p_tamanho);
 
 	if ( flag == 1 ) {
 
+		printf("\nOlá, seja bem-vindo(a) ao gerenciador de despesas! Para começar "
+				"vamos criar sua primeira despesa.\n");
+
 		criarRegistro(despesa);
-		salvarDados(despesa, *p_tamanho);
+		salvarDados(despesa, p_tamanho);
 
 		flag = 0;
 
@@ -72,18 +82,17 @@ int main() {
 	while ( menu != 0 ) {
 
 		printf("\nO que você deseja fazer agora?\n");
-		printf("\n0 = Encerrar programa\n1 = Adicionar despesa\n2 = Remover despesa"
-				"\n3 = Editar despesa\n4 = Mostrar despesas\n");
-		printf("\nResposta: ");
+		printf("\n0 - Encerrar programa\n1 - Adicionar despesa\n2 - Remover despesa"
+				"\n3 - Editar despesa\n4 - Mostrar despesas\n");
+		printf("\n\033[33mResposta:\033[0m ");
 		scanf("%d", &menu);
 
-		printf("\n-----------------------------------------------------------------\n");
+		printf("\033[2J\033[H");
 
 		if ( menu == 1 ) {
 
 			adicionarDespesa(p_despesa,p_tamanho);
-			salvarDados(despesa, *p_tamanho);
-
+			salvarDados(despesa, p_tamanho);
 			printf("\n-----------------------------------------------------------------\n");
 
 		}
@@ -91,20 +100,21 @@ int main() {
 		else if ( menu == 2 ) {
 
 			removerDespesa(p_despesa, p_tamanho, remover);
-			salvarDados(despesa, *p_tamanho);
+			salvarDados(despesa, p_tamanho);
 			printf("\n-----------------------------------------------------------------\n");
 
 		}
 
 		else if ( menu == 3 ) {
 
-			editarDespesa(despesa, editar);
-			salvarDados(despesa, *p_tamanho);
+			editarDespesa(despesa, p_tamanho, editar);
+			salvarDados(despesa, p_tamanho);
 			printf("\n-----------------------------------------------------------------\n");
 
 		}
 
 		else if ( menu == 4 ) {
+
 			mostrarDespesa(despesa, p_tamanho);
 			printf("\n-----------------------------------------------------------------\n");
 
@@ -118,48 +128,79 @@ int main() {
 
 }
 
-void salvarDados(registro *despesa, int tamanho) {
+void salvarDados(registro *despesa, int *p_tamanho) {
 
 	p_arquivo = fopen("despesas.bin", "wb");
 
-	printf("\nSalvando dados...\n");
+	printf("\n\033[33mSalvando dados...\033[0m");
 
-	fwrite(&tamanho, sizeof(int), 1, p_arquivo);
-	fwrite(despesa, sizeof(registro),tamanho, p_arquivo);
+	fwrite(p_tamanho, sizeof(int), 1, p_arquivo);
+	fwrite(despesa, sizeof(registro),*p_tamanho, p_arquivo);
 
-	printf("\nDados salvos!\n");
+	DELAY(atraso);
+
+	printf("\r\033[2K\033[32mDados salvos!\033[0m\n");
 
 	fclose(p_arquivo);
 
 }
 
 
-void carregarDados(registro *despesa, int tamanho) {
+void carregarDados(registro **p_despesa, int *p_tamanho) {
+
+	int tamanho = *p_tamanho;
 
 	p_arquivo = fopen("despesas.bin", "rb");
 
 	if ( p_arquivo == NULL ) {
 
-		printf("\nCriando arquivo...\n");
+		printf("\n\033[33mCriando arquivo...\033[0m");
+
 		p_arquivo = fopen("despesas.bin", "wb");
-		printf("\nArquivo criado!\n");
+
+		if ( p_arquivo == NULL ) {
+
+			printf("\n-----------------------------------------------------------------\n");
+			printf("\033[1;31mErro ao criar o arquivo! Encerrando programa.\033[0m");
+			printf("\n-----------------------------------------------------------------\n");
+			exit(1);
+
+		}
+
+		DELAY(atraso);
+
+		printf("\r\033[2K\033[32mArquivo criado!\033[0m\n");
 
 		flag = 1;
 
-	}
+		fclose(p_arquivo);
 
-	else {
-
-		printf("\nCarregando dados...\n");
-
-		fread(&tamanho, sizeof(int), 1, p_arquivo);
-		fread(despesa, sizeof(registro), tamanho, p_arquivo);
-
-		printf("\nDados carregados!\n");
+		return;
 
 	}
+
+	printf("\n\033[33mCarregando dados...\033[0m");
+
+	fread(p_tamanho, sizeof(int), 1, p_arquivo);
+
+	*p_despesa = (registro*)realloc(*p_despesa, (tamanho * sizeof(registro)));
+
+	if ( p_despesa == NULL ) {
+
+		printf("\n-----------------------------------------------------------------\n");
+		printf("\033[1;31mErro de realocação! Encerrando programa.\033[0m");
+		printf("\n-----------------------------------------------------------------\n");
+		exit(1);
+
+	}
+
+	fread(*p_despesa, sizeof(registro), *p_tamanho, p_arquivo);
 
 	fclose(p_arquivo);
+
+	DELAY(atraso);
+
+	printf("\r\033[2K\033[32mDados carregados!\033[0m\n");
 
 }
 
@@ -168,7 +209,7 @@ void criarRegistro(registro *despesa) {
 
 	int i = 0;
 
-	printf("\nDespesa %d\n", (i + 1));
+	printf("\n\033[1;34mDESPESA %d:\033[0m\n", (i + 1));
 
 	printf("\nCategoria: ");
 	scanf("%s", despesa[i].categoria);
@@ -192,13 +233,13 @@ void adicionarDespesa(registro **p_despesa, int *p_tamanho) {
 	if ( p_despesa == NULL ) {
 
 		printf("\n-----------------------------------------------------------------\n");
-		printf("Erro de realocação! Encerrando programa.");
+		printf("\033[1;31mErro de realocação! Encerrando programa.\033[0m");
 		printf("\n-----------------------------------------------------------------\n");
-		return;
+		exit(1);
 
 	}
 
-	printf("\nDespesa %d\n", (tamanhoAtual + 1));
+	printf("\n\033[1;34mDESPESA %d\033[0m\n", (tamanhoAtual + 1));
 
 	printf("\nCategoria: ");
 	scanf("%s", (*p_despesa)[tamanhoAtual].categoria);
@@ -221,10 +262,10 @@ ENTRADA_REMOVER:
 	printf("\nInsira a despesa que deseja remover: ");
 	scanf("%d", &remover);
 
-	while ( remover <= 0 || remover > LIMITE_DESPESA ) {
+	while ( remover <= 0 || remover > *p_tamanho ) {
 
 		printf("\n-----------------------------------------------------------------\n");
-		printf("\nValor inválido! Tente novamente.\n");
+		printf("\033[1;31mValor inválido! Tente novamente.\033[0m");
 		printf("\n-----------------------------------------------------------------\n");
 		goto ENTRADA_REMOVER;
 
@@ -235,7 +276,7 @@ ENTRADA_REMOVER:
 
 	remover -= 1;
 
-	printf("\nRemovendo Despesa %d\n", (remover + 1));
+	printf("\n\033[1mREMOVENDO DESPESA %d:\033[0m\n", (remover + 1));
 
 	printf("\nCategoria: %s", (*p_despesa)[remover].categoria);
 	printf("\nValor: R$%.2lf", (*p_despesa)[remover].valor);
@@ -251,26 +292,26 @@ ENTRADA_REMOVER:
 	if ( p_despesa == NULL ) {
 
 		printf("\n-----------------------------------------------------------------\n");
-		printf("Erro de realocação! Encerrando programa.");
+		printf("\033[1;31mErro de realocação! Encerrando programa.\033[0m");
 		printf("\n-----------------------------------------------------------------\n");
-		return;
+		exit(1);
 
 	}
 
 }
 
 
-void editarDespesa(registro *despesa, int editar) {
+void editarDespesa(registro *despesa, int *p_tamanho, int editar) {
 
 ENTRADA_EDITAR:
 
 	printf("\nInsira a despesa que deseja editar: ");
 	scanf("%d", &editar);
 
-	while ( editar <= 0 || editar > LIMITE_DESPESA ) {
+	while ( editar <= 0 || editar > *p_tamanho ) {
 
 		printf("\n-----------------------------------------------------------------\n");
-		printf("\nValor inválido! Tente novamente.\n");
+		printf("\033[1;31mValor inválido! Tente novamente.\033[0m");
 		printf("\n-----------------------------------------------------------------\n");
 		goto ENTRADA_EDITAR;
 
@@ -278,13 +319,13 @@ ENTRADA_EDITAR:
 
 	editar -= 1;
 
-	printf("\nEditando Despesa %d\n", (editar + 1));
+	printf("\n\033[1mEDITANDO DESPESA %d:\033[0m\n", (editar + 1));
 
 	printf("\nCategoria: %s", despesa[editar].categoria);
-	printf("\nValor: R$%.2lf", despesa[editar].valor);
+	printf("\nValor: \033[31mR$%.2lf\033[0m", despesa[editar].valor);
 	printf("\nDia: %02d\n", despesa[editar].dia);
 
-	printf("\nDespesa %d\n", (editar + 1));
+	printf("\n\033[1;34mDESPESA %d\033[0m\n", (editar + 1));
 
 	printf("\nCategoria: ");
 	scanf("%s", despesa[editar].categoria);
@@ -302,22 +343,22 @@ void mostrarDespesa(registro *despesa, int *p_tamanho) {
 
 	for ( int i = 0; i < *p_tamanho; i++ ) {
 
-		printf("\nDespesa %d\n", (i + 1));
+		printf("\n\033[1;34mDESPESA %d\033[0m\n", (i + 1));
 
 		printf("\nCategoria: %s", despesa[i].categoria);
-		printf("\nValor: R$%.2lf", despesa[i].valor);
+		printf("\nValor: \033[31mR$%.2lf\033[0m", despesa[i].valor);
 		printf("\nDia: %02d\n", despesa[i].dia);
 
 	}
 
-	printf("\nTotal gasto: R$%.2lf\n", somarGastos(despesa, p_tamanho));
+	printf("\nTotal gasto: \033[31mR$%.2lf\033[0m\n", somarGastos(despesa, p_tamanho));
 
 }
 
 
 double somarGastos(registro *despesa, int *p_tamanho) {
 
-	double soma;
+	double soma = 0.0;
 
 	for ( int i = 0; i < *p_tamanho; i++ )
 		soma += despesa[i].valor;
