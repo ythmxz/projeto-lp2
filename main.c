@@ -1,9 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#define DELAY(x) Sleep(x)
+#else
+#define DELAY(x) usleep(x * 1000)
+#endif
 
 FILE *p_arquivo;
 
 int flag = 0;
+int atraso = 500;
 
 typedef struct {
 
@@ -77,11 +87,11 @@ int main() {
 		printf("\n\033[33mResposta:\033[0m ");
 		scanf("%d", &menu);
 
-		printf("\n-----------------------------------------------------------------\n");
+		printf("\033[2J\033[H");
 
 		if ( menu == 1 ) {
 
-			system("cls || clear");
+			printf("\n-----------------------------------------------------------------\n");
 			adicionarDespesa(p_despesa,p_tamanho);
 			salvarDados(despesa, p_tamanho);
 			printf("\n-----------------------------------------------------------------\n");
@@ -90,7 +100,7 @@ int main() {
 
 		else if ( menu == 2 ) {
 
-			system("cls || clear");
+			printf("\n-----------------------------------------------------------------\n");
 			removerDespesa(p_despesa, p_tamanho, remover);
 			salvarDados(despesa, p_tamanho);
 			printf("\n-----------------------------------------------------------------\n");
@@ -99,7 +109,7 @@ int main() {
 
 		else if ( menu == 3 ) {
 
-			system("cls || clear");
+			printf("\n-----------------------------------------------------------------\n");
 			editarDespesa(despesa, p_tamanho, editar);
 			salvarDados(despesa, p_tamanho);
 			printf("\n-----------------------------------------------------------------\n");
@@ -108,7 +118,7 @@ int main() {
 
 		else if ( menu == 4 ) {
 
-			system("cls || clear");
+			printf("\n-----------------------------------------------------------------\n");
 			mostrarDespesa(despesa, p_tamanho);
 			printf("\n-----------------------------------------------------------------\n");
 
@@ -131,6 +141,8 @@ void salvarDados(registro *despesa, int *p_tamanho) {
 	fwrite(p_tamanho, sizeof(int), 1, p_arquivo);
 	fwrite(despesa, sizeof(registro),*p_tamanho, p_arquivo);
 
+	DELAY(atraso);
+
 	printf("\r\033[2K\033[32mDados salvos!\033[0m\n");
 
 	fclose(p_arquivo);
@@ -145,10 +157,16 @@ void carregarDados(registro *despesa, int *p_tamanho) {
 	if ( p_arquivo == NULL ) {
 
 		printf("\n\033[33mCriando arquivo...\033[0m");
+
 		p_arquivo = fopen("despesas.bin", "wb");
+
+		DELAY(atraso);
+
 		printf("\r\033[2K\033[32mArquivo criado!\033[0m\n");
 
 		flag = 1;
+
+		fclose(p_arquivo);
 
 	}
 
@@ -159,11 +177,11 @@ void carregarDados(registro *despesa, int *p_tamanho) {
 		fread(p_tamanho, sizeof(int), 1, p_arquivo);
 		fread(despesa, sizeof(registro), *p_tamanho, p_arquivo);
 
+		DELAY(atraso);
+
 		printf("\r\033[2K\033[32mDados carregados!\033[0m\n");
 
 	}
-
-	fclose(p_arquivo);
 
 }
 
